@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blue Noise Dither Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        .checkered {
+            background-image: 
+                linear-gradient(45deg, #2a2a2a 25%, transparent 25%), 
+                linear-gradient(-45deg, #2a2a2a 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #2a2a2a 75%), 
+                linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
+            background-size: 20px 20px;
+            background-color: #1a1a1a;
+        }
+
+        .range-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #4b5563;
+            border-radius: 2px;
+            outline: none;
+        }
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+        }
+        
+        .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
+        .toggle-checkbox:checked { right: 0; }
+
+        .canvas-container {
+            cursor: grab;
+        }
+        .canvas-container:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300 h-screen flex flex-col overflow-hidden font-sans select-none">
+
+    <header class="h-12 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 shrink-0 z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center text-white font-bold text-xs">BN</div>
+            <h1 class="text-sm font-semibold tracking-wide text-white">BLUE NOISE STUDIO</h1>
+        </div>
+        <div class="flex gap-4 items-center">
+            <div id="status-tag" class="text-[10px] px-2 py-0.5 rounded bg-gray-700 text-gray-400">IDLE</div>
+            <a href="https://github.com/MomentsInGraphics/BlueNoise" target="_blank" class="text-gray-400 hover:text-white transition-colors">
+                <i class="fab fa-github"></i>
+            </a>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+        <aside class="w-80 bg-gray-800 border-r border-gray-700 flex flex-col shrink-0 z-20 shadow-xl overflow-y-auto">
+            <div class="p-5 space-y-6">
+                <!-- Upload -->
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Source Image</label>
+                    <input type="file" id="imageInput" accept="image/*" class="hidden">
+                    <button onclick="document.getElementById('imageInput').click()" class="w-full h-20 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center gap-1 hover:border-blue-500 hover:bg-gray-700/50 transition-all text-gray-400">
+                        <i class="fas fa-upload text-xl"></i>
+                        <span class="text-[10px] font-medium">LOAD PHOTO</span>
+                    </button>
+                </div>
+
+                <!-- Dither Settings -->
+                <div class="space-y-4">
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Noise Profile</label>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setAlgorithm('blue')" id="btn-blue" class="algo-btn py-2 bg-blue-600 text-white text-xs rounded border border-blue-500">Blue Noise</button>
+                        <button onclick="setAlgorithm('white')" id="btn-white" class="algo-btn py-2 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600">White Noise</button>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-300">Color Dither</span>
+                        <input type="checkbox" id="colorToggle" class="hidden" onchange="processImage()">
+                        <label for="colorToggle" class="w-8 h-4 bg-gray-600 rounded-full relative cursor-pointer transition-colors" id="colorToggleLabel">
+                            <div class="absolute w-3 h-3 bg-white rounded-full top-0.5 left-0.5 transition-transform" id="colorToggleDot"></div>
+                        </label>
+                    </div>
+
+                    <div id="blue-settings" class="space-y-3 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] text-gray-400">Mask Size</span>
+                            <select id="maskSize" onchange="initBlueNoise()" class="bg-gray-800 text-[10px] border border-gray-600 rounded px-1">
+                                <option value="64">64px (Tiled)</option>
+                                <option value="128">128px (Detailed)</option>
+                                <option value="256">256px (Professional)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="space-y-1">
+                            <div class="flex justify-between">
+                                <span class="text-[10px] text-gray-400">Noise Scale</span>
+                                <span id="val-noise-scale" class="text-[10px] text-blue-400">1.0x</span>
+                            </div>
+                            <input type="range" id="noiseScale" min="0.5" max="4" step="0.1" value="1" class="range-slider" oninput="updateParams()">
+                        </div>
+                        
+                        <div id="progress-container" class="hidden h-1 bg-gray-700 rounded-full overflow-hidden">
+                            <div id="progress-bar" class="h-full bg-blue-500 w-0 transition-all"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sliders -->
+                <div class="space-y-4">
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Adjustments</label>
+                    
+                    <div class="space-y-3">
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px]"><span>Brightness</span><span id="v-br">0</span></div>
+                            <input type="range" id="brightness" min="-100" max="100" value="0" class="range-slider" oninput="updateParams()">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px]"><span>Contrast</span><span id="v-co">0</span></div>
+                            <input type="range" id="contrast" min="-100" max="100" value="0" class="range-slider" oninput="updateParams()">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px]"><span>Dither Opacity</span><span id="v-op">100%</span></div>
+                            <input type="range" id="opacity" min="0" max="100" value="100" class="range-slider" oninput="updateParams()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 mt-auto border-t border-gray-700">
+                <button onclick="downloadImage()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded shadow transition-colors">
+                    EXPORT IMAGE
+                </button>
+            </div>
+        </aside>
+
+        <section class="flex-1 relative bg-gray-900 checkered overflow-hidden flex flex-col">
+            <div class="absolute top-4 right-4 flex gap-1 bg-gray-800/80 p-1 rounded-lg border border-gray-700 z-30 backdrop-blur">
+                <button onclick="adjustZoom(-0.25)" class="w-8 h-8 hover:bg-gray-700 rounded text-gray-400"><i class="fas fa-search-minus"></i></button>
+                <button onclick="resetZoom()" class="px-2 text-[10px] font-mono hover:bg-gray-700 rounded text-gray-400" id="zoom-label">100%</button>
+                <button onclick="adjustZoom(0.25)" class="w-8 h-8 hover:bg-gray-700 rounded text-gray-400"><i class="fas fa-search-plus"></i></button>
+            </div>
+
+            <div id="viewport" class="flex-1 overflow-auto flex items-center justify-center p-12">
+                <div id="canvas-wrapper" class="relative shadow-2xl transition-transform origin-center">
+                    <canvas id="mainCanvas" class="block image-pixelated"></canvas>
+                </div>
+                <div id="empty-hint" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-20">
+                    <i class="fas fa-images text-6xl mb-4"></i>
+                    <p class="text-sm">DROP IMAGE TO BEGIN</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+<script>
+let blueNoiseMask = null;
+let NOISE_SIZE = 64;
+let originalImage = null;
+let currentZoom = 1.0;
+let algorithm = 'blue';
+let isGenerating = false;
+
+window.onload = () => {
+    initBlueNoise();
+    document.getElementById('imageInput').onchange = (e) => loadFile(e.target.files[0]);
+    window.addEventListener('drop', e => { e.preventDefault(); loadFile(e.dataTransfer.files[0]); });
+    window.addEventListener('dragover', e => e.preventDefault());
+};
+
+async function initBlueNoise() {
+    if (isGenerating) return;
+    isGenerating = true;
+    
+    NOISE_SIZE = parseInt(document.getElementById('maskSize').value);
+    const status = document.getElementById('status-tag');
+    const bar = document.getElementById('progress-bar');
+    const container = document.getElementById('progress-container');
+    
+    status.innerText = "GENERATING MASK...";
+    status.className = "text-[10px] px-2 py-0.5 rounded bg-blue-900 text-blue-200 animate-pulse";
+    container.classList.remove('hidden');
+
+    const size = NOISE_SIZE;
+    const total = size * size;
+    const sigma = 1.9;
+    const sigma2 = sigma * sigma;
+    
+    // Gaussian LUT
+    const lut = new Float32Array(total);
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            let dx = Math.min(x, size - x);
+            let dy = Math.min(y, size - y);
+            lut[y * size + x] = Math.exp(-(dx*dx + dy*dy) / (2 * sigma2));
+        }
+    }
+
+    const energy = new Float32Array(total).fill(0);
+    const result = new Int32Array(total);
+    
+    const addEnergy = (px, py) => {
+        for (let y = 0; y < size; y++) {
+            let ly = (y - py + size) % size;
+            let row = y * size;
+            let lRow = ly * size;
+            for (let x = 0; x < size; x++) {
+                let lx = (x - px + size) % size;
+                energy[row + x] += lut[lRow + lx];
+            }
+        }
+    };
+
+    // First seed
+    let startIdx = Math.floor(Math.random() * total);
+    result[startIdx] = 0;
+    energy[startIdx] = Infinity;
+    addEnergy(startIdx % size, Math.floor(startIdx / size));
+
+    let rank = 1;
+    const batch = size > 64 ? 100 : total;
+
+    const step = async () => {
+        const end = Math.min(rank + batch, total);
+        for (; rank < end; rank++) {
+            let minVal = Infinity, minIdx = -1;
+            for (let i = 0; i < total; i++) {
+                if (energy[i] < minVal) { minVal = energy[i]; minIdx = i; }
+            }
+            result[minIdx] = rank;
+            energy[minIdx] = Infinity;
+            addEnergy(minIdx % size, Math.floor(minIdx / size));
+        }
+
+        bar.style.width = (rank/total*100) + '%';
+        if (rank < total) {
+            setTimeout(step, 0);
+        } else {
+            blueNoiseMask = new Uint8ClampedArray(total);
+            for (let i = 0; i < total; i++) {
+                blueNoiseMask[i] = Math.floor((result[i] / (total - 1)) * 255);
+            }
+            status.innerText = "READY";
+            status.className = "text-[10px] px-2 py-0.5 rounded bg-green-900 text-green-200";
+            container.classList.add('hidden');
+            isGenerating = false;
+            if (originalImage) processImage();
+        }
+    };
+    step();
+}
+
+function loadFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+            originalImage = img;
+            document.getElementById('empty-hint').classList.add('hidden');
+            resetZoom();
+            processImage();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function updateParams() {
+    document.getElementById('v-br').innerText = document.getElementById('brightness').value;
+    document.getElementById('v-co').innerText = document.getElementById('contrast').value;
+    document.getElementById('v-op').innerText = document.getElementById('opacity').value + '%';
+    document.getElementById('val-noise-scale').innerText = document.getElementById('noiseScale').value + 'x';
+    processImage();
+}
+
+function setAlgorithm(a) {
+    algorithm = a;
+    document.querySelectorAll('.algo-btn').forEach(b => b.className = "algo-btn py-2 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600");
+    document.getElementById('btn-' + a).className = "algo-btn py-2 bg-blue-600 text-white text-xs rounded border border-blue-500";
+    processImage();
+}
+
+function processImage() {
+    if (!originalImage || !blueNoiseMask || isGenerating) return;
+
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = originalImage.width;
+    canvas.height = originalImage.height;
+    ctx.drawImage(originalImage, 0, 0);
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    
+    const br = parseInt(document.getElementById('brightness').value);
+    const co = parseInt(document.getElementById('contrast').value);
+    const op = parseInt(document.getElementById('opacity').value) / 100;
+    const isColor = document.getElementById('colorToggle').checked;
+    const nScale = parseFloat(document.getElementById('noiseScale').value);
+    
+    // UI Toggle Visuals
+    document.getElementById('colorToggleDot').style.transform = isColor ? 'translateX(1rem)' : 'translateX(0)';
+    document.getElementById('colorToggleLabel').style.backgroundColor = isColor ? '#3b82f6' : '#4b5563';
+
+    const factor = (259 * (co + 255)) / (255 * (259 - co));
+    const w = canvas.width;
+    
+    for (let i = 0; i < data.length; i += 4) {
+        let r = factor * (data[i] - 128) + 128 + br;
+        let g = factor * (data[i+1] - 128) + 128 + br;
+        let b = factor * (data[i+2] - 128) + 128 + br;
+
+        const x = (i / 4) % w;
+        const y = Math.floor((i / 4) / w);
+
+        let trR, trG, trB;
+        if (algorithm === 'blue') {
+            // Apply scale to the lookup coordinates
+            const sx = Math.floor(x / nScale) % NOISE_SIZE;
+            const sy = Math.floor(y / nScale) % NOISE_SIZE;
+            trR = blueNoiseMask[sy * NOISE_SIZE + sx];
+            
+            if (isColor) {
+                // Channel offsets to prevent "clumping" in color mode
+                const gx = Math.floor((x + 17*nScale) / nScale) % NOISE_SIZE;
+                const gy = Math.floor((y + 17*nScale) / nScale) % NOISE_SIZE;
+                const bx = Math.floor((x + 37*nScale) / nScale) % NOISE_SIZE;
+                const by = Math.floor((y + 37*nScale) / nScale) % NOISE_SIZE;
+                trG = blueNoiseMask[gy * NOISE_SIZE + gx];
+                trB = blueNoiseMask[by * NOISE_SIZE + bx];
+            } else {
+                trG = trB = trR;
+            }
+        } else {
+            trR = Math.random() * 255;
+            trG = isColor ? Math.random() * 255 : trR;
+            trB = isColor ? Math.random() * 255 : trR;
+        }
+
+        const outR = r > trR ? 255 : 0;
+        const outG = g > trG ? 255 : 0;
+        const outB = b > trB ? 255 : 0;
+
+        if (isColor) {
+            data[i] = data[i] * (1-op) + outR * op;
+            data[i+1] = data[i+1] * (1-op) + outG * op;
+            data[i+2] = data[i+2] * (1-op) + outB * op;
+        } else {
+            const gray = 0.21 * r + 0.72 * g + 0.07 * b;
+            const bin = gray > trR ? 255 : 0;
+            data[i] = data[i] * (1-op) + bin * op;
+            data[i+1] = data[i+1] * (1-op) + bin * op;
+            data[i+2] = data[i+2] * (1-op) + bin * op;
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+}
+
+function adjustZoom(delta) {
+    currentZoom = Math.max(0.1, Math.min(5, currentZoom + delta));
+    applyZoom();
+}
+
+function resetZoom() {
+    if (!originalImage) return;
+    const viewport = document.getElementById('viewport');
+    const ratio = Math.min((viewport.clientWidth - 40) / originalImage.width, (viewport.clientHeight - 40) / originalImage.height);
+    currentZoom = Math.min(1.0, ratio);
+    applyZoom();
+}
+
+function applyZoom() {
+    const wrapper = document.getElementById('canvas-wrapper');
+    wrapper.style.transform = `scale(${currentZoom})`;
+    document.getElementById('zoom-label').innerText = Math.round(currentZoom * 100) + '%';
+}
+
+function downloadImage() {
+    const link = document.createElement('a');
+    link.download = 'dithered_art.png';
+    link.href = document.getElementById('mainCanvas').toDataURL();
+    link.click();
+}
+</script>
+</body>
+</html>
