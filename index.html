@@ -3,204 +3,362 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blue Noise Dither Studio</title>
+    <title>Blue Noise Dither Studio Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
 
         .checkered {
             background-image: 
-                linear-gradient(45deg, #2a2a2a 25%, transparent 25%), 
-                linear-gradient(-45deg, #2a2a2a 25%, transparent 25%), 
-                linear-gradient(45deg, transparent 75%, #2a2a2a 75%), 
-                linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
+                linear-gradient(45deg, #1f2937 25%, transparent 25%), 
+                linear-gradient(-45deg, #1f2937 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #1f2937 75%), 
+                linear-gradient(-45deg, transparent 75%, #1f2937 75%);
             background-size: 20px 20px;
-            background-color: #1a1a1a;
+            background-color: #111827;
         }
 
-        .range-slider {
+        /* Custom Range Slider */
+        input[type=range] {
             -webkit-appearance: none;
-            width: 100%;
-            height: 4px;
-            background: #4b5563;
-            border-radius: 2px;
-            outline: none;
+            background: transparent;
         }
-        .range-slider::-webkit-slider-thumb {
+        input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
+            height: 14px;
+            width: 14px;
             border-radius: 50%;
             background: #3b82f6;
             cursor: pointer;
+            margin-top: -5px; 
+            box-shadow: 0 0 0 2px #1f2937;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #374151;
+            border-radius: 2px;
         }
         
-        .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
-        .toggle-checkbox:checked { right: 0; }
-
-        .canvas-container {
-            cursor: grab;
+        /* Select Styling */
+        select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+            -webkit-appearance: none;
+            appearance: none;
         }
-        .canvas-container:active {
-            cursor: grabbing;
+
+        .image-pixelated {
+            image-rendering: pixelated;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-300 h-screen flex flex-col overflow-hidden font-sans select-none">
+<body class="bg-gray-950 text-gray-300 h-screen flex flex-col overflow-hidden font-sans select-none text-sm">
 
-    <header class="h-12 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 shrink-0 z-10">
+    <!-- Professional Header -->
+    <header class="h-14 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-6 shrink-0 z-20 shadow-sm">
         <div class="flex items-center gap-3">
-            <div class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center text-white font-bold text-xs">BN</div>
-            <h1 class="text-sm font-semibold tracking-wide text-white">BLUE NOISE STUDIO</h1>
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-blue-900/50">BN</div>
+            <div>
+                <h1 class="text-sm font-bold tracking-wide text-white">BLUE NOISE STUDIO</h1>
+                <div class="text-[10px] text-gray-500 tracking-wider uppercase">Professional Edition</div>
+            </div>
         </div>
         <div class="flex gap-4 items-center">
-            <div id="status-tag" class="text-[10px] px-2 py-0.5 rounded bg-gray-700 text-gray-400">IDLE</div>
-            <a href="https://github.com/MomentsInGraphics/BlueNoise" target="_blank" class="text-gray-400 hover:text-white transition-colors">
-                <i class="fab fa-github"></i>
-            </a>
+            <div id="status-tag" class="hidden text-[10px] px-2 py-0.5 rounded bg-blue-900/50 text-blue-200 border border-blue-800 animate-pulse">
+                PROCESSING
+            </div>
+            <button onclick="downloadImage()" class="px-4 py-1.5 bg-gray-100 hover:bg-white text-gray-900 text-xs font-bold rounded shadow transition-all flex items-center gap-2">
+                <i class="fas fa-download"></i> EXPORT
+            </button>
         </div>
     </header>
 
     <main class="flex-1 flex overflow-hidden">
-        <aside class="w-80 bg-gray-800 border-r border-gray-700 flex flex-col shrink-0 z-20 shadow-xl overflow-y-auto">
-            <div class="p-5 space-y-6">
-                <!-- Upload -->
-                <div class="space-y-2">
-                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Source Image</label>
+        
+        <!-- Left Control Panel -->
+        <aside class="w-80 bg-gray-900 border-r border-gray-800 flex flex-col shrink-0 z-20 shadow-2xl overflow-y-auto">
+            
+            <div class="p-5 space-y-8">
+                
+                <!-- Input Section -->
+                <section>
                     <input type="file" id="imageInput" accept="image/*" class="hidden">
-                    <button onclick="document.getElementById('imageInput').click()" class="w-full h-20 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center gap-1 hover:border-blue-500 hover:bg-gray-700/50 transition-all text-gray-400">
-                        <i class="fas fa-upload text-xl"></i>
-                        <span class="text-[10px] font-medium">LOAD PHOTO</span>
+                    <button onclick="document.getElementById('imageInput').click()" class="w-full h-16 border border-dashed border-gray-700 rounded-lg flex items-center justify-center gap-3 hover:border-blue-500 hover:bg-gray-800/50 transition-all group text-gray-400">
+                        <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            <i class="fas fa-plus text-xs"></i>
+                        </div>
+                        <span class="text-xs font-medium">Open Image Source</span>
                     </button>
-                </div>
+                </section>
 
-                <!-- Dither Settings -->
-                <div class="space-y-4">
-                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Noise Profile</label>
-                    
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="setAlgorithm('blue')" id="btn-blue" class="algo-btn py-2 bg-blue-600 text-white text-xs rounded border border-blue-500">Blue Noise</button>
-                        <button onclick="setAlgorithm('white')" id="btn-white" class="algo-btn py-2 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600">White Noise</button>
-                    </div>
-
+                <!-- Engine Config -->
+                <section class="space-y-4">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs text-gray-300">Color Dither</span>
-                        <input type="checkbox" id="colorToggle" class="hidden" onchange="processImage()">
-                        <label for="colorToggle" class="w-8 h-4 bg-gray-600 rounded-full relative cursor-pointer transition-colors" id="colorToggleLabel">
-                            <div class="absolute w-3 h-3 bg-white rounded-full top-0.5 left-0.5 transition-transform" id="colorToggleDot"></div>
-                        </label>
+                        <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Noise Engine</h3>
+                        <div class="flex gap-1">
+                            <button onclick="setMode('dither')" id="mode-dither" class="px-2 py-1 rounded text-[10px] bg-blue-600 text-white font-medium border border-blue-500">Dither</button>
+                            <button onclick="setMode('grain')" id="mode-grain" class="px-2 py-1 rounded text-[10px] bg-gray-800 text-gray-400 border border-gray-700 hover:text-white">Film Grain</button>
+                        </div>
                     </div>
 
-                    <div id="blue-settings" class="space-y-3 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
-                        <div class="flex justify-between items-center">
-                            <span class="text-[10px] text-gray-400">Mask Size</span>
-                            <select id="maskSize" onchange="initBlueNoise()" class="bg-gray-800 text-[10px] border border-gray-600 rounded px-1">
-                                <option value="64">64px (Tiled)</option>
-                                <option value="128">128px (Detailed)</option>
-                                <option value="256">256px (Professional)</option>
-                            </select>
-                        </div>
-                        
-                        <div class="space-y-1">
-                            <div class="flex justify-between">
-                                <span class="text-[10px] text-gray-400">Noise Scale</span>
-                                <span id="val-noise-scale" class="text-[10px] text-blue-400">1.0x</span>
+                    <div class="bg-gray-800/30 rounded-lg border border-gray-800 p-3 space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-[10px] text-gray-400">Algorithm</label>
+                                <select id="algorithm" onchange="updateParams()" class="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:border-blue-500 outline-none">
+                                    <option value="blue">Blue Noise</option>
+                                    <option value="bayer">Bayer 8x8</option>
+                                    <option value="white">White Noise</option>
+                                </select>
                             </div>
-                            <input type="range" id="noiseScale" min="0.5" max="4" step="0.1" value="1" class="range-slider" oninput="updateParams()">
+                            <div class="space-y-1">
+                                <label class="text-[10px] text-gray-400">Texture Size</label>
+                                <select id="maskSize" onchange="initBlueNoise()" class="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:border-blue-500 outline-none">
+                                    <option value="64">64px</option>
+                                    <option value="128">128px</option>
+                                    <option value="256">256px</option>
+                                </select>
+                            </div>
                         </div>
-                        
-                        <div id="progress-container" class="hidden h-1 bg-gray-700 rounded-full overflow-hidden">
-                            <div id="progress-bar" class="h-full bg-blue-500 w-0 transition-all"></div>
+
+                        <div class="space-y-2 pt-1">
+                            <div class="flex justify-between text-[10px] text-gray-400">
+                                <span>Scale / Coarseness</span>
+                                <span id="v-scale" class="text-blue-400">1.0x</span>
+                            </div>
+                            <input type="range" id="noiseScale" min="0.5" max="4.0" step="0.1" value="1.0" oninput="updateParams()">
+                        </div>
+
+                        <div id="progress-container" class="hidden pt-1">
+                            <div class="h-1 bg-gray-700 rounded-full overflow-hidden">
+                                <div id="progress-bar" class="h-full bg-blue-500 w-0 transition-all duration-75"></div>
+                            </div>
+                            <div class="text-[9px] text-gray-500 text-right mt-1">Generating Distribution...</div>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <!-- Sliders -->
-                <div class="space-y-4">
-                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Adjustments</label>
+                <!-- Compositing -->
+                <section class="space-y-4">
+                    <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Compositing</h3>
                     
                     <div class="space-y-3">
-                        <div class="space-y-1">
-                            <div class="flex justify-between text-[10px]"><span>Brightness</span><span id="v-br">0</span></div>
-                            <input type="range" id="brightness" min="-100" max="100" value="0" class="range-slider" oninput="updateParams()">
+                         <div class="space-y-1">
+                            <label class="text-[10px] text-gray-400">Blending Mode</label>
+                            <select id="blendMode" onchange="updateParams()" class="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-xs text-gray-300 focus:border-blue-500 outline-none">
+                                <option value="normal">Normal</option>
+                                <option value="overlay">Overlay (Contrast)</option>
+                                <option value="soft-light">Soft Light (Subtle)</option>
+                                <option value="hard-light">Hard Light (Harsh)</option>
+                                <option value="multiply">Multiply (Darken)</option>
+                                <option value="screen">Screen (Lighten)</option>
+                                <option value="linear-light">Linear Light (Extreme)</option>
+                                <option value="difference">Difference (Artistic)</option>
+                            </select>
                         </div>
-                        <div class="space-y-1">
-                            <div class="flex justify-between text-[10px]"><span>Contrast</span><span id="v-co">0</span></div>
-                            <input type="range" id="contrast" min="-100" max="100" value="0" class="range-slider" oninput="updateParams()">
+
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[10px] text-gray-400">
+                                <span>Effect Strength</span>
+                                <span id="v-opacity">100%</span>
+                            </div>
+                            <input type="range" id="opacity" min="0" max="100" value="100" oninput="updateParams()">
                         </div>
-                        <div class="space-y-1">
-                            <div class="flex justify-between text-[10px]"><span>Dither Opacity</span><span id="v-op">100%</span></div>
-                            <input type="range" id="opacity" min="0" max="100" value="100" class="range-slider" oninput="updateParams()">
+                        
+                        <div class="flex items-center justify-between pt-2">
+                             <label class="text-[11px] text-gray-300">Chromatic Dither</label>
+                             <div class="relative inline-block w-8 mr-1 align-middle select-none">
+                                <input type="checkbox" id="colorToggle" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 border-gray-900 appearance-none cursor-pointer transition-all duration-300 right-4" onchange="updateParams()"/>
+                                <label for="colorToggle" class="toggle-label block overflow-hidden h-4 rounded-full bg-gray-700 cursor-pointer"></label>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                </section>
 
-            <div class="p-4 mt-auto border-t border-gray-700">
-                <button onclick="downloadImage()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded shadow transition-colors">
-                    EXPORT IMAGE
-                </button>
+                <!-- Nuance / Grading -->
+                <section class="space-y-4">
+                    <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Grading & Nuance</h3>
+                    
+                    <div class="space-y-4">
+                         <div class="space-y-2">
+                            <div class="flex justify-between text-[10px] text-gray-400">
+                                <span>Exposure Compensation</span>
+                                <span id="v-br">0</span>
+                            </div>
+                            <input type="range" id="brightness" min="-50" max="50" value="0" oninput="updateParams()">
+                        </div>
+
+                         <div class="space-y-2">
+                            <div class="flex justify-between text-[10px] text-gray-400">
+                                <span>Contrast Curve</span>
+                                <span id="v-co">0</span>
+                            </div>
+                            <input type="range" id="contrast" min="-50" max="50" value="0" oninput="updateParams()">
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[10px] text-gray-400">
+                                <span>Preserve Mids (Luma Mask)</span>
+                                <span id="v-luma">0%</span>
+                            </div>
+                             <input type="range" id="lumaMask" min="0" max="100" value="0" oninput="updateParams()">
+                             <p class="text-[9px] text-gray-600">Reduces effect in deep blacks and bright whites.</p>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </aside>
 
-        <section class="flex-1 relative bg-gray-900 checkered overflow-hidden flex flex-col">
-            <div class="absolute top-4 right-4 flex gap-1 bg-gray-800/80 p-1 rounded-lg border border-gray-700 z-30 backdrop-blur">
-                <button onclick="adjustZoom(-0.25)" class="w-8 h-8 hover:bg-gray-700 rounded text-gray-400"><i class="fas fa-search-minus"></i></button>
-                <button onclick="resetZoom()" class="px-2 text-[10px] font-mono hover:bg-gray-700 rounded text-gray-400" id="zoom-label">100%</button>
-                <button onclick="adjustZoom(0.25)" class="w-8 h-8 hover:bg-gray-700 rounded text-gray-400"><i class="fas fa-search-plus"></i></button>
+        <!-- Main Viewport -->
+        <section class="flex-1 relative bg-black checkered overflow-hidden flex flex-col">
+            
+            <!-- Floating Toolbar -->
+            <div class="absolute top-6 right-6 flex gap-1 bg-gray-900/90 p-1.5 rounded-lg border border-gray-700 z-30 backdrop-blur shadow-2xl">
+                <button onclick="adjustZoom(-0.25)" class="w-7 h-7 flex items-center justify-center hover:bg-gray-700 rounded text-gray-400 transition-colors"><i class="fas fa-minus text-xs"></i></button>
+                <button onclick="resetZoom()" class="px-3 text-[10px] font-mono font-medium hover:bg-gray-700 rounded text-gray-300 transition-colors min-w-[50px]" id="zoom-label">100%</button>
+                <button onclick="adjustZoom(0.25)" class="w-7 h-7 flex items-center justify-center hover:bg-gray-700 rounded text-gray-400 transition-colors"><i class="fas fa-plus text-xs"></i></button>
             </div>
 
-            <div id="viewport" class="flex-1 overflow-auto flex items-center justify-center p-12">
-                <div id="canvas-wrapper" class="relative shadow-2xl transition-transform origin-center">
-                    <canvas id="mainCanvas" class="block image-pixelated"></canvas>
+            <div id="viewport" class="flex-1 overflow-auto flex items-center justify-center p-12 custom-scrollbar">
+                <div id="canvas-wrapper" class="relative shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-transform duration-200 ease-out origin-center">
+                    <canvas id="mainCanvas" class="block image-pixelated bg-[#111]"></canvas>
                 </div>
-                <div id="empty-hint" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-20">
-                    <i class="fas fa-images text-6xl mb-4"></i>
-                    <p class="text-sm">DROP IMAGE TO BEGIN</p>
+                
+                <div id="empty-hint" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <div class="w-20 h-20 rounded-2xl bg-gray-800/30 border-2 border-dashed border-gray-700 flex items-center justify-center mb-4">
+                        <i class="fas fa-image text-3xl text-gray-600"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 font-medium tracking-wide">DRAG & DROP IMAGE</p>
                 </div>
+            </div>
+            
+            <!-- Metadata Footer -->
+            <div class="h-6 bg-gray-900 border-t border-gray-800 flex items-center justify-between px-4 text-[10px] text-gray-500 shrink-0">
+                <span id="meta-dims">-- x --</span>
+                <span id="meta-render">Render: 0ms</span>
             </div>
         </section>
     </main>
 
-<script>
-let blueNoiseMask = null;
-let NOISE_SIZE = 64;
-let originalImage = null;
-let currentZoom = 1.0;
-let algorithm = 'blue';
-let isGenerating = false;
+<style>
+    .toggle-checkbox:checked {
+        right: 0;
+        border-color: #3b82f6;
+    }
+    .toggle-checkbox:checked + .toggle-label {
+        background-color: #3b82f6;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-corner {
+        background: #111827;
+    }
+</style>
 
+<script>
+// --- Configuration & State ---
+const state = {
+    blueNoise: null,    // Float32Array (normalized 0-1)
+    maskSize: 64,       // 64, 128, 256
+    originalImg: null,  // Image Object
+    originalData: null, // Uint8ClampedArray
+    zoom: 1.0,
+    isGenerating: false,
+    mode: 'dither',     // 'dither' | 'grain'
+    settings: {
+        algo: 'blue',
+        scale: 1.0,
+        brightness: 0,
+        contrast: 0,
+        opacity: 1.0,
+        lumaMask: 0.0,
+        blendMode: 'normal',
+        isColor: false
+    }
+};
+
+// Bayer Matrix 8x8 (0-1 normalized)
+const bayer8x8 = new Float32Array([
+    0, 32, 8, 40, 2, 34, 10, 42,
+    48, 16, 56, 24, 50, 18, 58, 26,
+    12, 44, 4, 36, 14, 46, 6, 38,
+    60, 28, 52, 20, 62, 30, 54, 22,
+    3, 35, 11, 43, 1, 33, 9, 41,
+    51, 19, 59, 27, 49, 17, 57, 25,
+    15, 47, 7, 39, 13, 45, 5, 37,
+    63, 31, 55, 23, 61, 29, 53, 21
+]).map(v => v / 64.0);
+
+// --- Initialization ---
 window.onload = () => {
     initBlueNoise();
-    document.getElementById('imageInput').onchange = (e) => loadFile(e.target.files[0]);
-    window.addEventListener('drop', e => { e.preventDefault(); loadFile(e.dataTransfer.files[0]); });
+    
+    const input = document.getElementById('imageInput');
+    input.onchange = (e) => loadFile(e.target.files[0]);
+    
+    window.addEventListener('drop', e => { 
+        e.preventDefault(); 
+        if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); 
+    });
     window.addEventListener('dragover', e => e.preventDefault());
 };
 
-async function initBlueNoise() {
-    if (isGenerating) return;
-    isGenerating = true;
+function setMode(mode) {
+    state.mode = mode;
+    // UI Updates
+    document.getElementById('mode-dither').className = mode === 'dither' 
+        ? "px-2 py-1 rounded text-[10px] bg-blue-600 text-white font-medium border border-blue-500"
+        : "px-2 py-1 rounded text-[10px] bg-gray-800 text-gray-400 border border-gray-700 hover:text-white";
     
-    NOISE_SIZE = parseInt(document.getElementById('maskSize').value);
-    const status = document.getElementById('status-tag');
-    const bar = document.getElementById('progress-bar');
-    const container = document.getElementById('progress-container');
-    
-    status.innerText = "GENERATING MASK...";
-    status.className = "text-[10px] px-2 py-0.5 rounded bg-blue-900 text-blue-200 animate-pulse";
-    container.classList.remove('hidden');
+    document.getElementById('mode-grain').className = mode === 'grain'
+        ? "px-2 py-1 rounded text-[10px] bg-blue-600 text-white font-medium border border-blue-500"
+        : "px-2 py-1 rounded text-[10px] bg-gray-800 text-gray-400 border border-gray-700 hover:text-white";
 
-    const size = NOISE_SIZE;
-    const total = size * size;
+    // Auto-switch blend mode recommendation
+    const blendSelect = document.getElementById('blendMode');
+    if (mode === 'grain' && blendSelect.value === 'normal') {
+        blendSelect.value = 'overlay'; // Better default for grain
+    } else if (mode === 'dither' && blendSelect.value === 'overlay') {
+        blendSelect.value = 'normal';
+    }
+    
+    updateParams();
+}
+
+// --- Blue Noise Generator (Void & Cluster) ---
+async function initBlueNoise() {
+    if (state.isGenerating) return;
+    state.isGenerating = true;
+    
+    const sizeSelect = document.getElementById('maskSize');
+    state.maskSize = parseInt(sizeSelect.value);
+    
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const statusTag = document.getElementById('status-tag');
+    
+    progressContainer.classList.remove('hidden');
+    statusTag.classList.remove('hidden');
+    
+    const size = state.maskSize;
+    const totalPixels = size * size;
     const sigma = 1.9;
     const sigma2 = sigma * sigma;
-    
-    // Gaussian LUT
-    const lut = new Float32Array(total);
+
+    // Initialize Toroidal Gaussian LUT
+    const lut = new Float32Array(totalPixels);
     for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
             let dx = Math.min(x, size - x);
@@ -209,68 +367,96 @@ async function initBlueNoise() {
         }
     }
 
-    const energy = new Float32Array(total).fill(0);
-    const result = new Int32Array(total);
+    const energyMap = new Float32Array(totalPixels).fill(0);
+    const resultMask = new Int32Array(totalPixels);
     
-    const addEnergy = (px, py) => {
+    // Add energy helper
+    const addEnergy = (idx) => {
+        const px = idx % size;
+        const py = Math.floor(idx / size);
         for (let y = 0; y < size; y++) {
             let ly = (y - py + size) % size;
-            let row = y * size;
-            let lRow = ly * size;
+            let rOff = y * size;
+            let lOff = ly * size;
             for (let x = 0; x < size; x++) {
                 let lx = (x - px + size) % size;
-                energy[row + x] += lut[lRow + lx];
+                energyMap[rOff + x] += lut[lOff + lx];
             }
         }
     };
 
-    // First seed
-    let startIdx = Math.floor(Math.random() * total);
-    result[startIdx] = 0;
-    energy[startIdx] = Infinity;
-    addEnergy(startIdx % size, Math.floor(startIdx / size));
+    // Initial Seed
+    let firstIdx = Math.floor(Math.random() * totalPixels);
+    resultMask[firstIdx] = 0;
+    energyMap[firstIdx] = Infinity;
+    addEnergy(firstIdx);
 
     let rank = 1;
-    const batch = size > 64 ? 100 : total;
+    // Chunk processing to keep UI alive
+    const batchSize = size > 64 ? 200 : totalPixels;
 
-    const step = async () => {
-        const end = Math.min(rank + batch, total);
-        for (; rank < end; rank++) {
-            let minVal = Infinity, minIdx = -1;
-            for (let i = 0; i < total; i++) {
-                if (energy[i] < minVal) { minVal = energy[i]; minIdx = i; }
+    const processBatch = () => {
+        const endRank = Math.min(rank + batchSize, totalPixels);
+        
+        for (; rank < endRank; rank++) {
+            let minVal = Infinity;
+            let minIdx = -1;
+            
+            // Simple scan is fastest for these array sizes in JS
+            for (let i = 0; i < totalPixels; i++) {
+                if (energyMap[i] < minVal) {
+                    minVal = energyMap[i];
+                    minIdx = i;
+                }
             }
-            result[minIdx] = rank;
-            energy[minIdx] = Infinity;
-            addEnergy(minIdx % size, Math.floor(minIdx / size));
+
+            resultMask[minIdx] = rank;
+            energyMap[minIdx] = Infinity;
+            addEnergy(minIdx);
         }
 
-        bar.style.width = (rank/total*100) + '%';
-        if (rank < total) {
-            setTimeout(step, 0);
+        const pct = (rank / totalPixels) * 100;
+        progressBar.style.width = `${pct}%`;
+
+        if (rank < totalPixels) {
+            setTimeout(processBatch, 0);
         } else {
-            blueNoiseMask = new Uint8ClampedArray(total);
-            for (let i = 0; i < total; i++) {
-                blueNoiseMask[i] = Math.floor((result[i] / (total - 1)) * 255);
+            // Normalize to 0-1 Float for precision usage later
+            state.blueNoise = new Float32Array(totalPixels);
+            for (let i = 0; i < totalPixels; i++) {
+                state.blueNoise[i] = resultMask[i] / (totalPixels - 1);
             }
-            status.innerText = "READY";
-            status.className = "text-[10px] px-2 py-0.5 rounded bg-green-900 text-green-200";
-            container.classList.add('hidden');
-            isGenerating = false;
-            if (originalImage) processImage();
+            
+            progressContainer.classList.add('hidden');
+            statusTag.classList.add('hidden');
+            state.isGenerating = false;
+            if (state.originalImg) processImage();
         }
     };
-    step();
+
+    setTimeout(processBatch, 0);
 }
 
+// --- Image I/O ---
 function loadFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = e => {
         const img = new Image();
         img.onload = () => {
-            originalImage = img;
+            state.originalImg = img;
             document.getElementById('empty-hint').classList.add('hidden');
+            
+            // Generate buffer
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            state.originalData = ctx.getImageData(0, 0, img.width, img.height).data;
+            
+            // Update UI
+            document.getElementById('meta-dims').innerText = `${img.width} x ${img.height} px`;
             resetZoom();
             processImage();
         };
@@ -280,118 +466,248 @@ function loadFile(file) {
 }
 
 function updateParams() {
-    document.getElementById('v-br').innerText = document.getElementById('brightness').value;
-    document.getElementById('v-co').innerText = document.getElementById('contrast').value;
-    document.getElementById('v-op').innerText = document.getElementById('opacity').value + '%';
-    document.getElementById('val-noise-scale').innerText = document.getElementById('noiseScale').value + 'x';
-    processImage();
+    state.settings.algo = document.getElementById('algorithm').value;
+    state.settings.scale = parseFloat(document.getElementById('noiseScale').value);
+    state.settings.brightness = parseInt(document.getElementById('brightness').value);
+    state.settings.contrast = parseInt(document.getElementById('contrast').value);
+    state.settings.opacity = parseInt(document.getElementById('opacity').value) / 100;
+    state.settings.lumaMask = parseInt(document.getElementById('lumaMask').value) / 100;
+    state.settings.blendMode = document.getElementById('blendMode').value;
+    state.settings.isColor = document.getElementById('colorToggle').checked;
+
+    // Update labels
+    document.getElementById('v-scale').innerText = state.settings.scale.toFixed(1) + 'x';
+    document.getElementById('v-br').innerText = state.settings.brightness;
+    document.getElementById('v-co').innerText = state.settings.contrast;
+    document.getElementById('v-opacity').innerText = Math.round(state.settings.opacity * 100) + '%';
+    document.getElementById('v-luma').innerText = Math.round(state.settings.lumaMask * 100) + '%';
+
+    if (state.originalImg) requestAnimationFrame(processImage);
 }
 
-function setAlgorithm(a) {
-    algorithm = a;
-    document.querySelectorAll('.algo-btn').forEach(b => b.className = "algo-btn py-2 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600");
-    document.getElementById('btn-' + a).className = "algo-btn py-2 bg-blue-600 text-white text-xs rounded border border-blue-500";
-    processImage();
-}
-
+// --- The Core Engine ---
 function processImage() {
-    if (!originalImage || !blueNoiseMask || isGenerating) return;
+    if (!state.originalImg || !state.blueNoise || state.isGenerating) return;
 
+    const tStart = performance.now();
+    
     const canvas = document.getElementById('mainCanvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = originalImage.width;
-    canvas.height = originalImage.height;
-    ctx.drawImage(originalImage, 0, 0);
-
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imgData.data;
     
-    const br = parseInt(document.getElementById('brightness').value);
-    const co = parseInt(document.getElementById('contrast').value);
-    const op = parseInt(document.getElementById('opacity').value) / 100;
-    const isColor = document.getElementById('colorToggle').checked;
-    const nScale = parseFloat(document.getElementById('noiseScale').value);
-    
-    // UI Toggle Visuals
-    document.getElementById('colorToggleDot').style.transform = isColor ? 'translateX(1rem)' : 'translateX(0)';
-    document.getElementById('colorToggleLabel').style.backgroundColor = isColor ? '#3b82f6' : '#4b5563';
+    // Resize if needed
+    if (canvas.width !== state.originalImg.width) {
+        canvas.width = state.originalImg.width;
+        canvas.height = state.originalImg.height;
+    }
 
-    const factor = (259 * (co + 255)) / (255 * (259 - co));
     const w = canvas.width;
+    const h = canvas.height;
     
-    for (let i = 0; i < data.length; i += 4) {
-        let r = factor * (data[i] - 128) + 128 + br;
-        let g = factor * (data[i+1] - 128) + 128 + br;
-        let b = factor * (data[i+2] - 128) + 128 + br;
+    const outputImgData = ctx.createImageData(w, h);
+    const output = outputImgData.data;
+    const input = state.originalData; // Read-only buffer
+    
+    const { algo, scale, brightness, contrast, opacity, lumaMask, blendMode, isColor } = state.settings;
+    const mode = state.mode; // 'dither' or 'grain'
 
+    // Pre-calculate math constants
+    const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+    const noiseSize = state.maskSize;
+    
+    // Channel offsets for "Chromatic" noise to de-correlate RGB
+    const gOff = 17; 
+    const bOff = 37; 
+
+    for (let i = 0; i < input.length; i += 4) {
+        // 1. Read & Adjust Base Pixel
+        let r = input[i];
+        let g = input[i+1];
+        let b = input[i+2];
+        const a = input[i+3]; // Preserve alpha
+
+        // Apply Brightness/Contrast
+        r = contrastFactor * (r - 128) + 128 + brightness;
+        g = contrastFactor * (g - 128) + 128 + brightness;
+        b = contrastFactor * (b - 128) + 128 + brightness;
+
+        // Clamp
+        r = r < 0 ? 0 : (r > 255 ? 255 : r);
+        g = g < 0 ? 0 : (g > 255 ? 255 : g);
+        b = b < 0 ? 0 : (b > 255 ? 255 : b);
+
+        // 2. Generate Noise Value (0.0 to 1.0)
         const x = (i / 4) % w;
         const y = Math.floor((i / 4) / w);
+        
+        // Scale coordinates
+        const sx = Math.floor(x / scale);
+        const sy = Math.floor(y / scale);
 
-        let trR, trG, trB;
-        if (algorithm === 'blue') {
-            // Apply scale to the lookup coordinates
-            const sx = Math.floor(x / nScale) % NOISE_SIZE;
-            const sy = Math.floor(y / nScale) % NOISE_SIZE;
-            trR = blueNoiseMask[sy * NOISE_SIZE + sx];
-            
+        let nR, nG, nB;
+
+        if (algo === 'blue') {
+            nR = state.blueNoise[(sy % noiseSize) * noiseSize + (sx % noiseSize)];
             if (isColor) {
-                // Channel offsets to prevent "clumping" in color mode
-                const gx = Math.floor((x + 17*nScale) / nScale) % NOISE_SIZE;
-                const gy = Math.floor((y + 17*nScale) / nScale) % NOISE_SIZE;
-                const bx = Math.floor((x + 37*nScale) / nScale) % NOISE_SIZE;
-                const by = Math.floor((y + 37*nScale) / nScale) % NOISE_SIZE;
-                trG = blueNoiseMask[gy * NOISE_SIZE + gx];
-                trB = blueNoiseMask[by * NOISE_SIZE + bx];
+                nG = state.blueNoise[((sy + gOff) % noiseSize) * noiseSize + ((sx + gOff) % noiseSize)];
+                nB = state.blueNoise[((sy + bOff) % noiseSize) * noiseSize + ((sx + bOff) % noiseSize)];
             } else {
-                trG = trB = trR;
+                nG = nB = nR;
+            }
+        } else if (algo === 'bayer') {
+            nR = bayer8x8[(sy % 8) * 8 + (sx % 8)];
+            nG = nB = nR;
+        } else {
+            nR = Math.random();
+            nG = isColor ? Math.random() : nR;
+            nB = isColor ? Math.random() : nR;
+        }
+
+        // 3. Apply Effect (Dither vs Grain)
+        let eR, eG, eB;
+
+        if (mode === 'dither') {
+            // Threshold Dithering
+            if (isColor) {
+                // Per channel threshold
+                eR = (r / 255) > nR ? 255 : 0;
+                eG = (g / 255) > nG ? 255 : 0;
+                eB = (b / 255) > nB ? 255 : 0;
+            } else {
+                // Luma threshold
+                const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                const val = (luma / 255) > nR ? 255 : 0;
+                eR = eG = eB = val;
             }
         } else {
-            trR = Math.random() * 255;
-            trG = isColor ? Math.random() * 255 : trR;
-            trB = isColor ? Math.random() * 255 : trR;
+            // Film Grain Mode
+            // We shift noise to be -0.5 to 0.5 centered, then multiply by 255 for pixel value offset
+            // Typically Overlay/Softlight expects 0-255 inputs though.
+            // Let's generate a "Noise Layer Pixel" to blend.
+            eR = nR * 255;
+            eG = nG * 255;
+            eB = nB * 255;
         }
 
-        const outR = r > trR ? 255 : 0;
-        const outG = g > trG ? 255 : 0;
-        const outB = b > trB ? 255 : 0;
+        // 4. Luma Masking (Nuance)
+        // Calculate original luminance
+        let maskFactor = 1.0;
+        if (lumaMask > 0) {
+            // Simple bell curve around 128 (midtones)
+            const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            // Normalize -1 to 1
+            const dist = (luma - 128) / 128;
+            // 1.0 at center, 0.0 at edges based on strength
+            maskFactor = 1.0 - (Math.abs(dist) * lumaMask);
+            maskFactor = Math.max(0, maskFactor);
+        }
 
-        if (isColor) {
-            data[i] = data[i] * (1-op) + outR * op;
-            data[i+1] = data[i+1] * (1-op) + outG * op;
-            data[i+2] = data[i+2] * (1-op) + outB * op;
+        const effectiveOpacity = opacity * maskFactor;
+
+        // 5. Blending
+        if (effectiveOpacity === 0) {
+            output[i] = r;
+            output[i+1] = g;
+            output[i+2] = b;
+        } else if (effectiveOpacity === 1 && blendMode === 'normal' && mode === 'dither') {
+             // Optimization for standard dither
+            output[i] = eR;
+            output[i+1] = eG;
+            output[i+2] = eB;
         } else {
-            const gray = 0.21 * r + 0.72 * g + 0.07 * b;
-            const bin = gray > trR ? 255 : 0;
-            data[i] = data[i] * (1-op) + bin * op;
-            data[i+1] = data[i+1] * (1-op) + bin * op;
-            data[i+2] = data[i+2] * (1-op) + bin * op;
+            // Complex Blending
+            output[i] = blend(r, eR, blendMode, effectiveOpacity);
+            output[i+1] = blend(g, eG, blendMode, effectiveOpacity);
+            output[i+2] = blend(b, eB, blendMode, effectiveOpacity);
         }
+        output[i+3] = a;
     }
-    ctx.putImageData(imgData, 0, 0);
+
+    ctx.putImageData(outputImgData, 0, 0);
+    
+    const tEnd = performance.now();
+    document.getElementById('meta-render').innerText = `Render: ${(tEnd - tStart).toFixed(1)}ms`;
 }
 
+// --- Blending Engine ---
+// Formulas adapted from W3C Compositing & Photoshop standards
+function blend(base, active, mode, opacity) {
+    let res = 0;
+    
+    // Normalize 0-1 for math
+    const b = base / 255;
+    const a = active / 255;
+
+    switch (mode) {
+        case 'multiply':
+            res = b * a;
+            break;
+        case 'screen':
+            res = 1 - (1 - b) * (1 - a);
+            break;
+        case 'overlay':
+            // Overlay is Hard Light with swapped layers essentially
+            res = b < 0.5 ? (2 * b * a) : (1 - 2 * (1 - b) * (1 - a));
+            break;
+        case 'soft-light':
+            // W3C Soft Light formula
+            if (a <= 0.5) {
+                res = b - (1 - 2 * a) * b * (1 - b);
+            } else {
+                let d;
+                if (b <= 0.25) d = ((16 * b - 12) * b + 4) * b;
+                else d = Math.sqrt(b);
+                res = b + (2 * a - 1) * (d - b);
+            }
+            break;
+        case 'hard-light':
+            res = a <= 0.5 ? (2 * a * b) : (1 - 2 * (1 - a) * (1 - b));
+            break;
+        case 'linear-light':
+            // Linear light: A + 2B - 1 (Usually A is blend, B is base)
+            // But standard formula is: ScA + Dc - 1? 
+            // Often: active + 2*base - 1 is wrong context. 
+            // Correct Linear Light: base + 2*active - 1
+            res = b + 2 * a - 1;
+            break;
+        case 'difference':
+            res = Math.abs(b - a);
+            break;
+        default: // Normal
+            res = a;
+            break;
+    }
+
+    // Clamp 0-1
+    res = Math.min(1, Math.max(0, res));
+
+    // Apply Opacity (Lerp)
+    return (res * 255) * opacity + base * (1 - opacity);
+}
+
+// --- Viewport Utils ---
 function adjustZoom(delta) {
-    currentZoom = Math.max(0.1, Math.min(5, currentZoom + delta));
+    state.zoom = Math.max(0.1, Math.min(4, state.zoom + delta));
     applyZoom();
 }
-
 function resetZoom() {
-    if (!originalImage) return;
+    if(!state.originalImg) return;
     const viewport = document.getElementById('viewport');
-    const ratio = Math.min((viewport.clientWidth - 40) / originalImage.width, (viewport.clientHeight - 40) / originalImage.height);
-    currentZoom = Math.min(1.0, ratio);
+    // Calculate fit ratio
+    const ratioX = (viewport.clientWidth - 80) / state.originalImg.width;
+    const ratioY = (viewport.clientHeight - 80) / state.originalImg.height;
+    state.zoom = Math.min(1, Math.min(ratioX, ratioY));
+    if (state.zoom < 0.1) state.zoom = 0.1;
     applyZoom();
 }
-
 function applyZoom() {
     const wrapper = document.getElementById('canvas-wrapper');
-    wrapper.style.transform = `scale(${currentZoom})`;
-    document.getElementById('zoom-label').innerText = Math.round(currentZoom * 100) + '%';
+    wrapper.style.transform = `scale(${state.zoom})`;
+    document.getElementById('zoom-label').innerText = Math.round(state.zoom * 100) + '%';
 }
-
 function downloadImage() {
+    if (!state.originalImg) return;
     const link = document.createElement('a');
-    link.download = 'dithered_art.png';
+    link.download = `bluenoise_${Date.now()}.png`;
     link.href = document.getElementById('mainCanvas').toDataURL();
     link.click();
 }
